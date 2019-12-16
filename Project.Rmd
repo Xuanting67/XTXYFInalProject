@@ -1,0 +1,97 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(DataComputing)
+library(party)
+```
+
+
+### Import the Data
+
+```{r results = 'hide'}
+library(readr)
+Primary <-  read_csv("Video_Game_Sales_as_of_Jan_2017.csv")
+Developer<- read_csv("GameDeveloper.csv")
+  
+```
+
+### Data Inspections
+
+```{r}
+head(Primary)
+head(Developer)
+```
+
+
+### Clean Data and Merge two datasets together
+```{r}
+Developer_clean <-
+  Developer %>%
+  select(Name,Developer)
+Games_final <-
+  Primary %>%
+  left_join(Developer_clean,by=c("Name"="Name"))
+Games_final<-
+  Games_final%>%
+  na.omit()%>%
+  distinct()
+head(Games_final)
+```
+
+### Data Visualization
+```{r}
+Sales_year_publish<-
+  Games_final%>%
+  group_by(Year_of_Release)%>%
+  summarise(total=sum(Global_Sales))%>%
+  arrange((Year_of_Release))
+head(Sales_year_publish)
+Sales_year_publish%>%
+  ggplot(aes(x=Year_of_Release,y=total))+
+  geom_line()
+```
+
+
+```{r}
+type<-
+  Games_final%>%
+  group_by(Genre,Year_of_Release)%>%
+  summarise(total=sum(Global_Sales))
+type%>%
+  ggplot(aes(x=Year_of_Release,y=total))+
+  geom_point(aes(color=Genre))
+```
+
+```{r}
+mod1<-
+  party::ctree(
+    Global_Sales ~ Year_of_Release + User_Score ,
+    data=Games_final)
+Games_final%>%
+  mutate(probability=as.numeric(predict(mod1)),
+         likelihood=
+           ifelse(Global_Sales,
+                  probability,
+                  1-probability))%>%
+  summarise(log_likelihood=sum(log(likelihood)))
+```
+
+```{r}
+plot<-
+  Games_final%>%
+  group_by(Genre,Rating,Year_of_Release)%>%
+  summarise(total = sum(Global_Sales))
+plot%>%
+  ggplot(aes(x=Year_of_Release,y=total))+
+  geom_point(aes(color = Genre))+
+  facet_wrap(~Rating)
+```
