@@ -1,97 +1,225 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "STAT184 Project"
+author: "Xuanting Dong & Zhixuan Yang"
+date: "12/9/2019"
+output:
+  html_document:
+    df_print: paged
 ---
 
-```{r setup, include=FALSE}
-rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
-```
+
+### Research Question
+#### Which factors can heavily influence the sales of video games. 
+
+#### Here we first change all the column names to lower case, which is more reader friendly. 
 
 ```{r}
+# clean up workspace environment
+rm(list = ls())
+
+# all packages used for the assignment
 library(tidyverse)
 library(DataComputing)
 library(party)
+library(dplyr)
+library(rpart)
+library(rpart.plot)
+library(readr)
+
+# user defined functions
+
+file <- function(url){
+  file <- read_csv(url)
+  return (file)
+}
+
+rename_primary <- function(data){
+  data <-
+    data %>%
+    rename(
+      name = Name,
+      platform = Platform,
+      year = Year_of_Release,
+      genre = Genre,
+      publisher = Publisher,
+      na_sales = NA_Sales,
+      eu_sales = EU_Sales,
+      jp_sales= JP_Sales,
+      other_sales = Other_Sales,
+      global_sales =  Global_Sales,
+      critic_score = Critic_Score,
+      critic_count = Critic_Count,
+      user_score = User_Score,
+      user_count = User_Count,
+      rating = Rating
+    )
+  return (data)
+}
+
+rename_developer <- function(data){
+  data <-
+    data %>%
+    rename(
+      name = Name,
+      platform = Platform,
+      year = Year_of_Release,
+      genre = Genre,
+      publisher = Publisher,
+      rating = Rating,
+      developer = Developer
+    )
+  return (data)
+}
 ```
 
-
-### Import the Data
+### Import the Data & Inspections
 
 ```{r results = 'hide'}
 library(readr)
-Primary <-  read_csv("Video_Game_Sales_as_of_Jan_2017.csv")
-Developer<- read_csv("GameDeveloper.csv")
-  
+Primary <- read_csv("Video_Game_Sales_as_of_Jan_2017.csv")
+head(Primary)
+Developer <- read_csv("GameDeveloper.csv")
+head(Developer)
 ```
 
-### Data Inspections
+
+### Change the Column Names to Lower-case
 
 ```{r}
+Developer <-
+  rename_developer(Developer)
+Primary <- 
+  rename_primary(Primary)
 head(Primary)
 head(Developer)
 ```
+#### We are gonna use two different datasets, so it is very important to make sure they can merge to a desired new data set, which requries us to clean those two data set first, making them good to merge later. 
 
 
 ### Clean Data and Merge two datasets together
 ```{r}
 Developer_clean <-
   Developer %>%
-  select(Name,Developer)
+  select(name,developer)
 Games_final <-
   Primary %>%
-  left_join(Developer_clean,by=c("Name"="Name"))
-Games_final<-
-  Games_final%>%
-  na.omit()%>%
+  left_join(Developer_clean,by=c("name"="name"))
+Games_final <-
+  Games_final %>%
+  na.omit() %>%
   distinct()
 head(Games_final)
 ```
 
+
+#### For doing any analysis, data visualization is necessary. Here we used the merged data to identify the relationship between sales and year, because we think year is a important factor which will influence the sales of video games. 
+
 ### Data Visualization
 ```{r}
-Sales_year_publish<-
-  Games_final%>%
-  group_by(Year_of_Release)%>%
-  summarise(total=sum(Global_Sales))%>%
-  arrange((Year_of_Release))
-head(Sales_year_publish)
-Sales_year_publish%>%
-  ggplot(aes(x=Year_of_Release,y=total))+
+SalesByYear <-
+  Games_final %>%
+  group_by(year) %>%
+  summarise(total = sum(global_sales)) %>%
+  arrange((year))
+SalesByYear %>%
+  ggplot(aes(x = year, y = total)) +
+  ggtitle("Sales By Year") +
   geom_line()
 ```
+### Findings: we found that before 2008, the sales of video games is basically increasing, especially between 2000 and 2008, there was a radical increase. However, after 2008, we saw a huge jump, and the descending trend even lasted to now. Thus, the sales of video games are not always increasing. Maybe because there are a lot of free, high-qaulity and  playable games coming out these years, people are more likely to play free games. Furthermore, we noticed that a lot of games on smart phone are very popular these days, and most of video games before 2008 were on PC, so we think the increasing number of games on smart phone occupy the market of traditional vedio games. 
 
 
+
+#### Then, after taking year into account, we think the platform for video games is crucial also. We choose to use histogram to display the sales on differernt platforms. 
 ```{r}
-type<-
-  Games_final%>%
-  group_by(Genre,Year_of_Release)%>%
-  summarise(total=sum(Global_Sales))
-type%>%
-  ggplot(aes(x=Year_of_Release,y=total))+
-  geom_point(aes(color=Genre))
+SalesByPlatform <-
+  Games_final %>%
+  group_by(platform) %>%
+  summarise(total=sum(global_sales))
+SalesByPlatform %>%
+  ggplot(aes(x = platform)) +
+  ggtitle("Sales by Platform") +
+  geom_bar(aes(weight = total))
 ```
+#### Obviously, we can see the video games on PS2,PS3,Wii and X360 has leading sales among all the platform. Actually, I own a X360, and I think it is a good platform to play, because it is connected, globally and well-designed platforms. Thus, as a customer, we prefer to choose a good platform first, and then to choose the games on the platform. Thus, the success of PS2,PS3,Wii,and X360 also brings the success of those videos games published on them. 
+
+
+
+
+
+
+
+
 
 ```{r}
-mod1<-
+Sales_platform_user_score <-
   party::ctree(
-    Global_Sales ~ Year_of_Release + User_Score ,
+    global_sales ~ critic_score + user_score,
     data=Games_final)
-Games_final%>%
-  mutate(probability=as.numeric(predict(mod1)),
-         likelihood=
-           ifelse(Global_Sales,
+Games_final %>%
+  mutate(probability=as.numeric(predict(Sales_platform_user_score)),
+         likelihood =
+           ifelse(global_sales,
                   probability,
-                  1-probability))%>%
-  summarise(log_likelihood=sum(log(likelihood)))
+                  1-probability)) %>%
+  summarise(log_likelihood = sum(log(likelihood)))
 ```
 
 ```{r}
-plot<-
-  Games_final%>%
-  group_by(Genre,Rating,Year_of_Release)%>%
-  summarise(total = sum(Global_Sales))
-plot%>%
-  ggplot(aes(x=Year_of_Release,y=total))+
-  geom_point(aes(color = Genre))+
-  facet_wrap(~Rating)
+DecisionTree <- rpart( global_sales ~ critic_score + critic_count + user_score + user_count, data = Games_final)
+prp(DecisionTree)
 ```
+#### In order to have a more comprehensive view, we decide to make a plot like this, including year, genre and ranking, which we believe to find some interesting result. 
+
+```{r}
+Sales_By_Year_Genre_Ranking <-
+  Games_final %>%
+  group_by(genre,rating,year) %>%
+  summarise(total = sum(global_sales))
+Sales_By_Year_Genre_Ranking %>%
+  ggplot(aes(x = year,y = total)) +
+  geom_point(aes(color = genre)) +
+  ggtitle("Sales By Year & Genre & Ranking") +
+  facet_wrap(~rating)
+```
+#### This shows that if you want to do best selling video games, you may have to make it a E class, which requires a high-standard quality level. Other than that, we found that people were more likely to play sports games, like 2K,FIFA. Unluckily, even the E class, sports games in recent 5 years, the sales were far less than in 2008. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Lastly, we show the histogram of sales by top 7 developers. We want to find out which developer's style is more popular, enabling us to have a good direction in designing our own games. 
+
+
+```{r}
+SalesByDeveloper <-
+  Games_final %>%
+  group_by(developer) %>%
+  summarise(total = sum(global_sales)) %>%
+  arrange(desc(total)) %>%
+  head(7)
+SalesByDeveloper %>%
+  ggplot(aes(x = developer)) +
+  geom_bar(aes(weight = total)) +
+  ggtitle("Sales By Top 7 Developers")
+```
+
+#### Unsurprisingly, the games developed by Nintendo were the most popular. Honestly, I play games from Nintedo since I was 10. Some games like Mario are still very popular now. 
+
+
+
+
+
+
+
+
+
+
