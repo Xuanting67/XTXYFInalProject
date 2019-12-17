@@ -10,7 +10,7 @@ df_print: paged
 ### Research Question
 #### Which factors can heavily influence the sales of video games. 
 
-#### Here we first change all the column names to lower case, which is more reader friendly. 
+#### Here we first change all the column names to lower case, which is more reader-friendly.
 
 ```{r results = 'hide'}
 # clean up workspace environment
@@ -96,8 +96,7 @@ head(Primary)
 head(Developer)
 ```
 
-#### We are gonna use two different datasets, so it is very important to make sure they can merge to a desired new data set, which requries us to clean those two data set first, making them good to merge later. 
-
+#### We are going to use two different datasets, so it is very important to make sure they can merge with a desired new data set, which requires us to clean those two data set first, making them good to merge later.
 
 ### Clean Data and Merge two datasets together
 
@@ -115,7 +114,7 @@ Games_final <-
 head(Games_final)
 ```
 
-#### For doing any analysis, data visualization is necessary. Here we used the merged data to identify the relationship between sales and year, because we think year is a important factor which will influence the sales of video games. 
+#### For doing any analysis, data visualization is necessary. Here we used the merged data to identify the relationship between sales and year because we think the term of years is an important factor that will influence the sales of video games. Meanwhile, we want to know the change in video game marketing in the past 20 years.
 
 ### Data Visualization
 
@@ -132,11 +131,11 @@ SalesByYear %>%
   ylab("sales")
 ```
 
-### Findings: we found that before 2008, the sales of video games is basically increasing, especially between 2000 and 2008, there was a radical increase. However, after 2008, we saw a huge jump, and the descending trend even lasted to now. Thus, the sales of video games are not always increasing. Maybe because there are a lot of free, high-qaulity and  playable games coming out these years, people are more likely to play free games. Furthermore, we noticed that a lot of games on smart phone are very popular these days, and most of video games before 2008 were on PC, so we think the increasing number of games on smart phone occupy the market of traditional vedio games. 
+#### Findings: we found that before 2008, the sales of video games are basically increasing, especially between 2000 and 2008, there was a radical increase. However, after 2008, we saw a huge jump, and the descending trend even lasted until now. Thus, the sales of video games are not always increasing. Maybe because there are a lot of free, high-quality, and playable games coming out these years, people are more likely to play free games. Furthermore, we noticed that a lot of games on the smartphone are very popular these days, and most of the video games before 2008 were on PC, so we think the increasing number of games on smartphone occupy the market of traditional video games.
 
 
 
-#### Then, after taking year into account, we think the platform for video games is crucial also. We choose to use histogram to display the sales on differernt platforms. 
+### Then, after taking year into account, we think the platform for video games is crucial also. We choose to use histogram to display the sales on differernt platforms. 
 
 ```{r}
 SalesByPlatform <-
@@ -150,10 +149,10 @@ SalesByPlatform %>%
   ylab("sales")
 ```
 
-#### Obviously, we can see the video games on PS2,PS3,Wii and X360 has leading sales among all the platform. Actually, I own a X360, and I think it is a good platform to play, because it is connected, globally and well-designed platforms. Thus, as a customer, we prefer to choose a good platform first, and then to choose the games on the platform. Thus, the success of PS2,PS3,Wii,and X360 also brings the success of those videos games published on them. 
+#### Obviously, we can see the video games on PS2, PS3, Wii, and X360 have leading sales among all the platforms. Actually, I own an X360, and I think it is a good platform to play because it is connected, globally, and well-designed platforms. Thus, as a customer, we prefer to choose a good platform first, and then to choose the games on the platform. Thus, the success of PS2, PS3, Wii, and X360 also brings the success of those video games published on them.
 
 
-#### Now, we are using the basic machine learning to help us find out which factors can heavily influence the sales of video games.
+### Now, we are using basic machine learning to help us find out which factors can heavily influence the sales of video games.
 
 ```{r}
 Sales_critic_score_user_score <-
@@ -172,8 +171,8 @@ Games_final %>%
 ```{r}
 Sales_user_score <-
   party::ctree( 
-    global_sales ~ user_score, #find the factors of global sales, and we are interested in user scores.
-    data=Games_final) 
+    global_sales ~ user_score, #find the factors of global sales, and we are interested in user scores
+    data = Games_final)
 Games_final %>%
   mutate(probability=as.numeric(predict(Sales_user_score)),
          likelihood =
@@ -183,32 +182,31 @@ Games_final %>%
   summarise(log_likelihood = sum(log(likelihood)))
 ```
 
-#### from the above results, we can see that user_score is a significant factor in sales, while critic_score does not seem to be that important. This result makes sense because the sales are depending on users (players) rather than media.
+#### From the above results, we can see that user_score is a significant factor in sales, while critic_score does not seem to be that important. This result makes sense because the sales are depending on users (players) rather than media.
 
 ```{r}
-DecisionTree <- rpart( global_sales ~ critic_score + critic_count + user_score + user_count, data = Games_final)
-prp(DecisionTree)
+DecisionTree <- rpart( global_sales ~ critic_score + critic_count + user_score + user_count, data = Games_final) #try to build the model that involves critic_score, critic_count, user_score, and user_count.
+prp(DecisionTree) #print the decision tree
 ```
 
-#### From this decision tree, we can see that user_count is the most important factors. Obviously, there is a positive correlation between game sales and the number of user reviews.
+#### From this decision tree, we can see that user_count is the most important factor. Obviously, there is a positive correlation between game sales and the number of user reviews.
 
-
-#### In order to have a more comprehensive view, we decide to make a plot like this, including year, genre and ranking, which we believe to find some interesting result. 
+### In order to have a more comprehensive view, we decide to make a plot like this, including year, genre, and ranking, which we believe in finding some interesting results.
 
 ```{r}
 Sales_By_Year_Genre_Ranking <-
   Games_final %>%
-  group_by(genre,rating,year) %>%
-  summarise(total = sum(global_sales))
+  group_by(genre,rating,year) %>% #group by genere, rating, and year
+  summarise(total = sum(global_sales)) #sum all the sales
 Sales_By_Year_Genre_Ranking %>%
   ggplot(aes(x = year,y = total)) +
   geom_point(aes(color = genre)) +
   ggtitle("Sales By Year & Genre & Ranking") +
-  facet_wrap(~rating) +
+  facet_wrap(~rating) + #use facet_wrap to display different rankings.
   ylab("sales")
 ```
 
-#### This shows that if you want to do best selling video games, you may have to make it a E class, which requires a high-standard quality level. Other than that, we found that people were more likely to play sports games, like 2K,FIFA. Unluckily, even the E class, sports games in recent 5 years, the sales were far less than in 2008. 
+#### This shows that if you want to do the best selling video games, you may have to make it an E level, which requires a high-standard quality level. Other than that, we found that people were more likely to play sports games, like 2K, FIFA. Unluckily, even the E level, sports games in recent five years, the sales were far less than in 2008.
 
 
 
@@ -222,16 +220,15 @@ Sales_By_Year_Genre_Ranking %>%
 
 
 
-#### Lastly, we show the histogram of sales by top 7 developers. We want to find out which developer's style is more popular, enabling us to have a good direction in designing our own games. 
-
+### Lastly, we show the histogram of sales by the top 7 developers. We want to find out which developer's style is more popular, enabling us to have the right direction in designing our own games.
 
 ```{r}
 SalesByDeveloper <-
   Games_final %>%
-  group_by(developer) %>%
-  summarise(total = sum(global_sales)) %>%
-  arrange(desc(total)) %>%
-  head(7)
+  group_by(developer) %>% #group by developer
+  summarise(total = sum(global_sales)) %>% 
+  arrange(desc(total)) %>% #Sales_user_score
+  head(7) #select the top 7 header
 SalesByDeveloper %>%
   ggplot(aes(x = developer)) +
   geom_bar(aes(weight = total)) +
@@ -239,13 +236,10 @@ SalesByDeveloper %>%
   ylab("sales")
 ```
 
-#### Unsurprisingly, the games developed by Nintendo were the most popular. Honestly, I play games from Nintedo since I was 10. Some games like Mario are still very popular now. 
+#### Unsurprisingly, the games developed by Nintendo were the most popular. Honestly, I play games from Nintendo since I was 10. Some games like Mario are still very popular now.
 
 
-
-
-
-
+### Overall, to answer our research question, we made the following conclusion. Ranking, genre, and developer of a video game make a difference in the sale of video games. Games, which are E ranking, genre sports, and developed by Nintendo, will have the best selling.
 
 
 
